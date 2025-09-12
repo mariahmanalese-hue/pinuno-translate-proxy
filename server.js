@@ -11,21 +11,18 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "https://mariahmanalese-hue.github.io");
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
-  
+
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
-  
+
   next();
 });
 
-// Primary and fallback LibreTranslate instances (no API key required)
+// Primary LibreTranslate instance
 const LIBRE_INSTANCES = [
   "https://translate.fedilab.app/translate"
 ];
-
-
-
 
 async function translateText(q, source, target) {
   let lastError;
@@ -66,28 +63,13 @@ async function translateText(q, source, target) {
   throw lastError || new Error("All translation attempts failed");
 }
 
+// Existing /translate route
 app.post("/translate", async (req, res) => {
   try {
     const { q, source = "auto", target = "en" } = req.body;
     if (!q) return res.status(400).json({ error: "Missing 'q' text" });
 
-    const response = await fetch("https://translate.fedilab.app/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ q, source, target, format: "text" })
-    });
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      const text = await response.text();
-      console.error("Non-JSON response from LibreTranslate:", text.slice(0, 200));
-      throw new Error(`Expected JSON, got HTML`);
-    }
-
-    const data = await response.json();
+    const data = await translateText(q, source, target);
     res.json(data);
   } catch (err) {
     console.error("Proxy error:", err.message);
@@ -95,13 +77,24 @@ app.post("/translate", async (req, res) => {
   }
 });
 
+// ✅ NEW: POST / route for compatibility with your frontend
+app.post("/", async (req, res) => {
+  try {
+    const { q, source = "auto", target = "en" } = req.body;
+    if (!q) return res.status(400).json({ error: "Missing 'q' text" });
 
+    const data = await translateText(q, source, target);
+    res.json(data);
+  } catch (err) {
+    console.error("Proxy error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
+// Health check
 app.get("/", (req, res) => {
   res.send("✅ LibreTranslate Proxy is running");
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
