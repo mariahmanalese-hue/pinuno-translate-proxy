@@ -1,3 +1,11 @@
+import express from "express";
+import cors from "cors";
+import fetch from "node-fetch";
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
 // Allow CORS for your GitHub Pages site
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "https://mariahmanalese-hue.github.io");
@@ -10,14 +18,6 @@ app.use((req, res, next) => {
   
   next();
 });
-
-import express from "express";
-import cors from "cors";
-import fetch from "node-fetch";
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // Primary and fallback LibreTranslate instances (no API key required)
 const LIBRE_INSTANCES = [
@@ -103,4 +103,5 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
